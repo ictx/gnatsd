@@ -39,6 +39,7 @@ type Options struct {
 	ConfigFile     string        `json:"-"`
 	Host           string        `json:"addr"`
 	Port           int           `json:"port"`
+	UnixSocket     string        `json:"unix_socket"`
 	Trace          bool          `json:"-"`
 	Debug          bool          `json:"-"`
 	NoLog          bool          `json:"-"`
@@ -750,6 +751,9 @@ func MergeOptions(fileOpts, flagOpts *Options) *Options {
 	if flagOpts.ProfPort != 0 {
 		opts.ProfPort = flagOpts.ProfPort
 	}
+	if flagOpts.UnixSocket != "" {
+		opts.UnixSocket = flagOpts.UnixSocket
+	}
 	if flagOpts.Cluster.ListenStr != "" {
 		opts.Cluster.ListenStr = flagOpts.Cluster.ListenStr
 	}
@@ -939,6 +943,8 @@ func ConfigureOptions(fs *flag.FlagSet, args []string, printVersion, printHelp, 
 	fs.BoolVar(&showHelp, "help", false, "Show this message.")
 	fs.IntVar(&opts.Port, "port", 0, "Port to listen on.")
 	fs.IntVar(&opts.Port, "p", 0, "Port to listen on.")
+	fs.StringVar(&opts.UnixSocket, "unix_socket", "", "File path of unix socket.")
+	fs.StringVar(&opts.UnixSocket, "u", "", "File path of unix socket.")
 	fs.StringVar(&opts.Host, "addr", "", "Network host to listen on.")
 	fs.StringVar(&opts.Host, "a", "", "Network host to listen on.")
 	fs.StringVar(&opts.Host, "net", "", "Network host to listen on.")

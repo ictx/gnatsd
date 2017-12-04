@@ -68,6 +68,7 @@ type Server struct {
 	http          net.Listener
 	httpHandler   http.Handler
 	profiler      net.Listener
+	unixSocket    net.Listener
 	httpReqStats  map[string]uint64
 	routeListener net.Listener
 	routeInfo     Info
@@ -283,8 +284,20 @@ func (s *Server) Start() {
 		s.StartProfiler()
 	}
 
+	//wart for unix socket clients.
+	go s.ListenUnixSocket(s.opts.UnixSocket)
+
 	// Wait for clients.
 	s.AcceptLoop(clientListenReady)
+}
+
+func (s *Server) CloseUnixSocket() bool {
+	if s.unixSocket != nil {
+		s.unixSocket.Close()
+		s.unixSocket = nil
+		return true
+	}
+	return false
 }
 
 // Shutdown will shutdown the server instance by kicking out the AcceptLoop
@@ -332,6 +345,11 @@ func (s *Server) Shutdown() {
 		s.listener = nil
 	}
 
+	//Kick unix socket
+	if s.CloseUnixSocket() == true {
+		doneExpected++
+	}
+
 	// Kick route AcceptLoop()
 	if s.routeListener != nil {
 		doneExpected++
@@ -370,6 +388,29 @@ func (s *Server) Shutdown() {
 
 	// Wait for go routines to be done.
 	s.grWG.Wait()
+}
+
+func (s *Server) ListenUnixSocket(path string) {
+	//Ignore unix socket
+	if path == "" {
+		return 
+	}
+
+	s.Noticef("Listening unix socket path %s ", path)
+	l, e := net.Listen("unix", path)
+	if e != nil {
+		s.Fatalf("Error listening on path %s, %q", path, e)
+		return 
+	}
+	
+	s.Noticef("Unix socket is ready.");
+	s.mu.Lock()
+	s.unixSocket = l
+	s.mu.Unlock()
+
+	s.ListenLoop(l)
+
+	s.Noticef("Unix socket listen loop is exiting")
 }
 
 // AcceptLoop is exported for easier testing.
@@ -430,6 +471,13 @@ func (s *Server) AcceptLoop(clr chan struct{}) {
 	close(clr)
 	clr = nil
 
+	s.ListenLoop(l);
+
+	s.Noticef("Server Exiting..")
+	s.done <- true
+}
+
+func (s* Server) ListenLoop(l net.Listener) {
 	tmpDelay := ACCEPT_MIN_SLEEP
 
 	for s.isRunning() {
@@ -454,8 +502,6 @@ func (s *Server) AcceptLoop(clr chan struct{}) {
 			s.grWG.Done()
 		})
 	}
-	s.Noticef("Server Exiting..")
-	s.done <- true
 }
 
 // StartProfiler is called to enable dynamic profiling.

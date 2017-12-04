@@ -152,6 +152,7 @@ Server Options:
     -ms,--https_port <port>          Use port for https monitoring
     -c, --config <file>              Configuration file
     -sl,--signal <signal>[=<pid>]    Send signal to gnatsd process (stop, quit, reopen, reload)
+    -u, --unix_socket                Use unix socket for IPC in local host
 
 Logging Options:
     -l, --log <file>                 File to redirect log output

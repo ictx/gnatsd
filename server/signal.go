@@ -30,6 +30,8 @@ func (s *Server) handleSignals() {
 			s.Debugf("Trapped %q signal", sig)
 			switch sig {
 			case syscall.SIGINT:
+				//Remove the unix socket path
+				s.CloseUnixSocket()
 				s.Noticef("Server Exiting..")
 				os.Exit(0)
 			case syscall.SIGUSR1:
